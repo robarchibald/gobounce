@@ -100,6 +100,11 @@ func TestWatchFolders(t *testing.T) {
 				RootFolders: []string{"testdata/dir"},
 			},
 			[]string{dir, exclude, excludeSubdir, subdir}},
+		{"trailing dot",
+			Options{
+				RootFolders: []string{"testdata/dir/."},
+			},
+			[]string{dir, exclude, excludeSubdir, subdir}},
 		{"without exclude",
 			Options{
 				RootFolders:      []string{"testdata/dir"},

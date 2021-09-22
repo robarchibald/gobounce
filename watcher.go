@@ -92,17 +92,8 @@ func (w *Filewatcher) getWatchFolders() ([]string, error) {
 			if err != nil {
 				return err
 			}
-			if !d.IsDir() {
+			if !d.IsDir() || (!w.options.IncludeHidden && isHiddenFolder(path)) || isExcludedFolder(path, exclusions) {
 				return nil
-			}
-			if !w.options.IncludeHidden && strings.HasPrefix(filepath.Base(path), ".") {
-				return nil
-			}
-			pathWithSlashes := string(filepath.Separator) + path + string(filepath.Separator)
-			for _, excludedFolder := range exclusions {
-				if strings.Contains(pathWithSlashes, excludedFolder) { // match against full folder name or subdir. partial names not allowed
-					return nil
-				}
 			}
 			watchFolders = append(watchFolders, path)
 			return nil
@@ -125,6 +116,28 @@ func prepareFolders(folders []string) []string {
 		folders[i] = fmt.Sprintf("%c%s%c", filepath.Separator, folder, filepath.Separator) // add leading and trailing separator
 	}
 	return folders
+}
+
+func isHiddenFolder(path string) bool {
+	dir := filepath.Base(path)
+	if dir == "." { // dot by itself represents current folder, so we need to get the absolute path
+		fullPath, _ := filepath.Abs(path)
+		dir = filepath.Base(fullPath)
+	}
+	if strings.HasPrefix(dir, ".") {
+		return true
+	}
+	return false
+}
+
+func isExcludedFolder(path string, exclusions []string) bool {
+	pathWithSlashes := string(filepath.Separator) + path + string(filepath.Separator)
+	for _, excludedFolder := range exclusions {
+		if strings.Contains(pathWithSlashes, excludedFolder) { // match against full folder name or subdir. partial names not allowed
+			return true
+		}
+	}
+	return false
 }
 
 // WatchFolders returns the current list of folders being watched by gobounce
