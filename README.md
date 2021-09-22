@@ -1,6 +1,6 @@
 [![](https://godoc.org/github.com/robarchibald/gobounce?status.svg)](https://pkg.go.dev/github.com/robarchibald/gobounce)
 [![Build Status](https://app.travis-ci.com/robarchibald/gobounce.svg)](https://app.travis-ci.com/robarchibald/gobounce)
-[![Coverage Status](https://coveralls.io/repos/github/robarchibald/gobounce/badge.svg?branch=main)](https://coveralls.io/github/robarchibald/gobounce?branch=main)s
+[![Coverage Status](https://coveralls.io/repos/github/robarchibald/gobounce/badge.svg?branch=main)](https://coveralls.io/github/robarchibald/gobounce?branch=main)
 # gobounce
 A cross-platform Go file watcher and event debouncer utilizing github.com/radovskyb/watcher
 
