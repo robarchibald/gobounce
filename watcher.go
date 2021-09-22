@@ -85,24 +85,37 @@ func (w *Filewatcher) getWatchFolders() ([]string, error) {
 	if w.options.ExcludeSubdirs {
 		return w.options.RootFolders, nil
 	}
+
 	watchFolders := []string{}
 	exclusions := prepareFolders(w.options.FolderExclusions)
 	for _, rootFolder := range w.options.RootFolders {
-		err := filepath.WalkDir(rootFolder, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if !d.IsDir() || (!w.options.IncludeHidden && isHiddenFolder(path)) || isExcludedFolder(path, exclusions) {
-				return nil
-			}
-			watchFolders = append(watchFolders, path)
-			return nil
-		})
+		stat, err := os.Stat(rootFolder)
 		if err != nil {
-			return watchFolders, err
+			return nil, err
 		}
+		watchFolders = w.addDirs(rootFolder, exclusions, watchFolders, fs.FileInfoToDirEntry(stat))
 	}
 	return watchFolders, nil
+}
+
+func (w *Filewatcher) addDirs(path string, exclusions, folders []string, item fs.DirEntry) []string {
+	if !item.IsDir() || (!w.options.IncludeHidden && isHiddenFolder(path)) || isExcludedFolder(path, exclusions) {
+		return folders
+	}
+
+	folders = append(folders, path)
+	return append(folders, w.getFolders(path, exclusions)...)
+}
+
+func (w *Filewatcher) getFolders(path string, exclusions []string) []string {
+	filesAndFolders, _ := os.ReadDir(path)
+
+	folders := []string{}
+	for _, item := range filesAndFolders {
+		fullPath := filepath.Join(path, item.Name())
+		folders = w.addDirs(fullPath, exclusions, folders, item)
+	}
+	return folders
 }
 
 func prepareFolders(folders []string) []string {

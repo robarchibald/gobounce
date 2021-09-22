@@ -73,6 +73,7 @@ func TestGetWatcherPath(t *testing.T) {
 }
 
 func TestWatchFolders(t *testing.T) {
+	root, _ := filepath.Abs(".")
 	dir, _ := filepath.Abs("testdata/dir")
 	hidden, _ := filepath.Abs("testdata/dir/.hidden")
 	exclude, _ := filepath.Abs("testdata/dir/exclude")
@@ -100,6 +101,12 @@ func TestWatchFolders(t *testing.T) {
 				RootFolders: []string{"testdata/dir"},
 			},
 			[]string{dir, exclude, excludeSubdir, subdir}},
+		{"don't include git folders",
+			Options{
+				RootFolders:      []string{"."},
+				FolderExclusions: []string{"testdata", "example"},
+			},
+			[]string{root}},
 		{"trailing dot",
 			Options{
 				RootFolders: []string{"testdata/dir/."},
