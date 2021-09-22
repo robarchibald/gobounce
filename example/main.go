@@ -1,11 +1,3 @@
-[![](https://godoc.org/github.com/robarchibald/gobounce?status.svg)](https://pkg.go.dev/github.com/robarchibald/pgbounce)
-[![Build Status](https://travis-ci.org/robarchibald/pgbounce.svg)](https://travis-ci.org/robarchibald/pgbounce)
-# gobounce
-A cross-platform Go file watcher and event debouncer utilizing github.com/radovskyb/watcher
-
-## Example Usage
-
-```go
 package main
 
 import (
@@ -43,4 +35,3 @@ func handleChanges(w *gobounce.Filewatcher) {
 		}
 	}
 }
-```
