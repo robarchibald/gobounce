@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetWatchFolders(t *testing.T) {
-	w := &Filewatcher{options: Options{RootFolders: []string{filepath.Join("testdata", "dir")}, FolderExclusions: []string{"exclude", ""}}}
+	w := &Filewatcher{options: Options{RootFolders: []string{filepath.Join("testdata", "dir")}, FolderExclusions: prepareFolders([]string{"exclude", ""})}}
 	folders, err := w.getWatchFolders()
 	assert.NoError(t, err)
 	assert.Equal(t, []string{
