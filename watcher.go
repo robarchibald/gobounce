@@ -32,6 +32,7 @@ type Options struct {
 	RootFolders      []string
 	FolderExclusions []string
 	IncludeHidden    bool
+	ExcludeSubdirs   bool
 }
 
 // New creates a debounced file watcher. It will watch for changes to the filesystem every `pollDuration` duration
@@ -69,9 +70,13 @@ func New(options Options, pollDuration time.Duration) (*Filewatcher, error) {
 	}
 
 	var err error
-	w.watchFolders, err = w.getWatchFolders()
-	if err != nil {
-		return nil, fmt.Errorf("error determining watch folders: %w", err)
+	if !options.ExcludeSubdirs {
+		w.watchFolders, err = w.getWatchFolders()
+		if err != nil {
+			return nil, fmt.Errorf("error determining watch folders: %w", err)
+		}
+	} else {
+		w.watchFolders = options.RootFolders
 	}
 	for _, folder := range w.watchFolders {
 		if err := w.watcher.Add(folder); err != nil {
@@ -119,6 +124,10 @@ func prepareFolders(folders []string) []string {
 		folders[i] = fmt.Sprintf("%c%s%c", filepath.Separator, folder, filepath.Separator) // add leading and trailing separator
 	}
 	return folders
+}
+
+func (w *Filewatcher) WatchFolders() []string {
+	return w.watchFolders
 }
 
 func (w *Filewatcher) Start() {
