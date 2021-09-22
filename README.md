@@ -1,5 +1,5 @@
 [![](https://godoc.org/github.com/robarchibald/gobounce?status.svg)](https://pkg.go.dev/github.com/robarchibald/gobounce)
-[![Build Status](https://travis-ci.com/robarchibald/gobounce.svg)](https://travis-ci.com/robarchibald/gobounce)
+[![Build Status](https://apps.travis-ci.com/robarchibald/gobounce.svg)](https://app.travis-ci.com/robarchibald/gobounce)
 # gobounce
 A cross-platform Go file watcher and event debouncer utilizing github.com/radovskyb/watcher
 
