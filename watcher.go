@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +21,6 @@ type Filewatcher struct {
 
 	watcher          *watcher.Watcher
 	options          Options
-	watchFolders     []string
 	pollDuration     time.Duration
 	fileDebounce     map[string]*time.Timer
 	folderDebounce   map[string]*time.Timer
@@ -69,16 +69,11 @@ func New(options Options, pollDuration time.Duration) (*Filewatcher, error) {
 		w.watcher.IgnoreHiddenFiles(true)
 	}
 
-	var err error
-	if !options.ExcludeSubdirs {
-		w.watchFolders, err = w.getWatchFolders()
-		if err != nil {
-			return nil, fmt.Errorf("error determining watch folders: %w", err)
-		}
-	} else {
-		w.watchFolders = options.RootFolders
+	watchFolders, err := w.getWatchFolders()
+	if err != nil {
+		return nil, fmt.Errorf("error determining watch folders: %w", err)
 	}
-	for _, folder := range w.watchFolders {
+	for _, folder := range watchFolders {
 		if err := w.watcher.Add(folder); err != nil {
 			return nil, fmt.Errorf("error adding watch folder: %w", err)
 		}
@@ -87,6 +82,9 @@ func New(options Options, pollDuration time.Duration) (*Filewatcher, error) {
 }
 
 func (w *Filewatcher) getWatchFolders() ([]string, error) {
+	if w.options.ExcludeSubdirs {
+		return w.options.RootFolders, nil
+	}
 	watchFolders := []string{}
 	exclusions := prepareFolders(w.options.FolderExclusions)
 	for _, rootFolder := range w.options.RootFolders {
@@ -95,6 +93,9 @@ func (w *Filewatcher) getWatchFolders() ([]string, error) {
 				return err
 			}
 			if !d.IsDir() {
+				return nil
+			}
+			if !w.options.IncludeHidden && strings.HasPrefix(filepath.Base(path), ".") {
 				return nil
 			}
 			pathWithSlashes := string(filepath.Separator) + path + string(filepath.Separator)
@@ -126,8 +127,24 @@ func prepareFolders(folders []string) []string {
 	return folders
 }
 
+// WatchFolders returns the current list of folders being watched by gobounce
 func (w *Filewatcher) WatchFolders() []string {
-	return w.watchFolders
+	folders := make(map[string]bool)
+	folderSlice := []string{}
+	for filename := range w.watcher.WatchedFiles() {
+		stat, _ := os.Stat(filename)
+		if stat != nil && stat.IsDir() {
+			continue
+		}
+
+		dir := filepath.Dir(filename)
+		if !folders[dir] {
+			folders[dir] = true
+			folderSlice = append(folderSlice, dir)
+		}
+	}
+	sort.Strings(folderSlice)
+	return folderSlice
 }
 
 func (w *Filewatcher) Start() {
