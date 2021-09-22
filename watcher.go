@@ -33,6 +33,7 @@ type Options struct {
 	FolderExclusions []string
 	IncludeHidden    bool
 	ExcludeSubdirs   bool
+	FollowNewFolders bool
 }
 
 // New creates a debounced file watcher. It will watch for changes to the filesystem every `pollDuration` duration
@@ -68,6 +69,7 @@ func New(options Options, pollDuration time.Duration) (*Filewatcher, error) {
 	if !w.options.IncludeHidden {
 		w.watcher.IgnoreHiddenFiles(true)
 	}
+	w.options.FolderExclusions = prepareFolders(w.options.FolderExclusions)
 
 	watchFolders, err := w.getWatchFolders()
 	if err != nil {
@@ -87,33 +89,32 @@ func (w *Filewatcher) getWatchFolders() ([]string, error) {
 	}
 
 	watchFolders := []string{}
-	exclusions := prepareFolders(w.options.FolderExclusions)
 	for _, rootFolder := range w.options.RootFolders {
 		stat, err := os.Stat(rootFolder)
 		if err != nil {
 			return nil, err
 		}
-		watchFolders = w.addDirs(rootFolder, exclusions, watchFolders, fs.FileInfoToDirEntry(stat))
+		watchFolders = w.addDirs(rootFolder, watchFolders, fs.FileInfoToDirEntry(stat))
 	}
 	return watchFolders, nil
 }
 
-func (w *Filewatcher) addDirs(path string, exclusions, folders []string, item fs.DirEntry) []string {
-	if !item.IsDir() || (!w.options.IncludeHidden && isHiddenFolder(path)) || isExcludedFolder(path, exclusions) {
+func (w *Filewatcher) addDirs(path string, folders []string, item fs.DirEntry) []string {
+	if !item.IsDir() || (!w.options.IncludeHidden && isHiddenFolder(path)) || w.isExcludedFolder(path) {
 		return folders
 	}
 
 	folders = append(folders, path)
-	return append(folders, w.getFolders(path, exclusions)...)
+	return append(folders, w.getFolders(path)...)
 }
 
-func (w *Filewatcher) getFolders(path string, exclusions []string) []string {
+func (w *Filewatcher) getFolders(path string) []string {
 	filesAndFolders, _ := os.ReadDir(path)
 
 	folders := []string{}
 	for _, item := range filesAndFolders {
 		fullPath := filepath.Join(path, item.Name())
-		folders = w.addDirs(fullPath, exclusions, folders, item)
+		folders = w.addDirs(fullPath, folders, item)
 	}
 	return folders
 }
@@ -143,9 +144,9 @@ func isHiddenFolder(path string) bool {
 	return false
 }
 
-func isExcludedFolder(path string, exclusions []string) bool {
+func (w *Filewatcher) isExcludedFolder(path string) bool {
 	pathWithSlashes := string(filepath.Separator) + path + string(filepath.Separator)
-	for _, excludedFolder := range exclusions {
+	for _, excludedFolder := range w.options.FolderExclusions {
 		if strings.Contains(pathWithSlashes, excludedFolder) { // match against full folder name or subdir. partial names not allowed
 			return true
 		}
@@ -200,6 +201,11 @@ func (w *Filewatcher) debounce(e watcher.Event) {
 	path, _ := filepath.Abs(getWatcherPath(e.Path))
 	if path == "" {
 		return
+	}
+
+	if (e.Op == watcher.Create || e.Op == watcher.Move || e.Op == watcher.Rename) && e.IsDir() &&
+		w.options.FollowNewFolders && !w.isExcludedFolder(path) && (w.options.IncludeHidden || !isHiddenFolder(path)) {
+		w.watcher.Add(path)
 	}
 
 	w.mutex.Lock()
