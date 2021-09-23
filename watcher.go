@@ -59,6 +59,7 @@ func New(options Options, pollDuration time.Duration) (*Filewatcher, error) {
 	w := &Filewatcher{
 		FileChanged:      make(chan string),
 		FolderChanged:    make(chan string),
+		Error:            make(chan error),
 		watcher:          watcher.New(),
 		options:          options,
 		pollDuration:     pollDuration,
