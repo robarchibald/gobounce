@@ -17,6 +17,7 @@ import (
 type Filewatcher struct {
 	FileChanged   chan string
 	FolderChanged chan string
+	Error         chan error
 	Closed        chan struct{}
 
 	watcher          *watcher.Watcher
@@ -185,6 +186,8 @@ func (w *Filewatcher) listen() {
 		select {
 		case e := <-w.watcher.Event:
 			w.debounce(e)
+		case err := <-w.watcher.Error:
+			w.Error <- err
 		case <-w.watcher.Closed:
 			return
 		}
@@ -209,8 +212,12 @@ func (w *Filewatcher) debounce(e watcher.Event) {
 	}
 
 	w.mutex.Lock()
-	w.debounceItem(w.fileDebounce, path, w.FileChanged)
-	w.debounceItem(w.folderDebounce, filepath.Dir(path), w.FolderChanged)
+	if e.IsDir() {
+		w.debounceItem(w.folderDebounce, path, w.FolderChanged)
+	} else {
+		w.debounceItem(w.fileDebounce, path, w.FileChanged)
+		w.debounceItem(w.folderDebounce, filepath.Dir(path), w.FolderChanged)
+	}
 	w.mutex.Unlock()
 }
 

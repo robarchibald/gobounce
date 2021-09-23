@@ -30,6 +30,8 @@ func handleChanges(w *gobounce.Filewatcher) {
 			fmt.Println("file changed", filename)
 		case folder := <-w.FolderChanged:
 			fmt.Println("folder changed", folder)
+		case err := <-w.Error:
+			fmt.Println("error", err)
 		case <-w.Closed:
 			return
 		}
