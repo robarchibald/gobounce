@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -35,6 +36,7 @@ type Options struct {
 	IncludeHidden    bool
 	ExcludeSubdirs   bool
 	FollowNewFolders bool
+	MaxConcurrency   int
 }
 
 // New creates a debounced file watcher. It will watch for changes to the filesystem every `pollDuration` duration
@@ -56,9 +58,12 @@ type Options struct {
 //                 debounce timer finishes for folder1/file2. FileChanged channel publishes the filename
 //                 debounce timer finishes for folder1. FileChanged channel publishes the folder name
 func New(options Options, pollDuration time.Duration) (*Filewatcher, error) {
+	if options.MaxConcurrency == 0 { // no concurrency set, so use GOMAXPROCS
+		options.MaxConcurrency = runtime.GOMAXPROCS(0)
+	}
 	w := &Filewatcher{
-		FileChanged:      make(chan string),
-		FolderChanged:    make(chan string),
+		FileChanged:      make(chan string, options.MaxConcurrency),
+		FolderChanged:    make(chan string, options.MaxConcurrency),
 		Error:            make(chan error),
 		watcher:          watcher.New(),
 		options:          options,
